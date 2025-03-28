@@ -258,44 +258,72 @@ const listAppointment = async(req, res) => {
 // }
 
 
-const cancelAppointment = async (req, res) => {
-    try {
-      const { appointmentId } = req.body;
-      console.log(appointmentId);
-      if (!appointmentId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Appointment ID is required'
-        });
-      }
+// const cancelAppointment = async (req, res) => {
+//     try {
+//       const { appointmentId } = req.body;
+//       console.log(appointmentId);
+//       if (!appointmentId) {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Appointment ID is required'
+//         });
+//       }
   
-      const appointment = await appoinmentModel.findById(appointmentId);
+//       const appointment = await appoinmentModel.findById(appointmentId);
       
-      if (!appointment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Appointment not found'
-        });
-      }
+//       if (!appointment) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Appointment not found'
+//         });
+//       }
   
-      // Update appointment status
-      appointment.cancelled = true;
-      await appointment.save();
+//       // Update appointment status
+//       appointment.cancelled = true;
+//       await appointment.save();
   
-      res.json({
-        success: true,
-        message: 'Appointment cancelled successfully'
-      });
+//       res.json({
+//         success: true,
+//         message: 'Appointment cancelled successfully'
+//       });
   
+//     } catch (error) {
+//       console.error('Cancel appointment error:', error);
+//       res.status(500).json({
+//         success: false,
+//         message: 'Error cancelling appointment',
+//         error: error.message  // Include error message for debugging
+//       });
+//     }
+//   };
+const cancelAppointment=async(req,res)=>{
+    try {
+        const {userId,appointmentId}=req.body
+        //const {appointmentId}=req.body
+        const appionmentData=await appoinmentModel.findById(appointmentId)
+        await appoinmentModel.findByIdAndUpdate(appointmentId,{cancelled:true})
+
+        //verify appointment user
+        if(appionmentData.userId !==userId){
+            return res.json({success:false,message:'Unauthorized action'})
+        }
+
+        //releasing doctor slot
+        const {docId,slotDate,slotTime}=appionmentData
+        const doctorData =await doctorModel.findById(docId)
+        let slots_booked =doctorData.slots_booked
+        slots_booked[slotDate]=slots_booked[slotDate].filter(e=>e!==slotTime)
+        await doctorModel.findByIdAndUpdate(docId,{slots_booked})
+
+        res.json({success:true,message:'Appointment cancelled successfully'})
+
     } catch (error) {
-      console.error('Cancel appointment error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error cancelling appointment',
-        error: error.message  // Include error message for debugging
-      });
+        console.log(error)
+        res.json({success:false,message:error.message})
     }
-  };
+}
+  
+
 //   const razorpayInstance =new razorpay({
 //     key_id:'',
 //     key_secret:''
@@ -305,11 +333,6 @@ const cancelAppointment = async (req, res) => {
 
   //API to make payment of appoinment using razorpay
  // const paymentRazorpay= async(req,res)=>{
-
-
-  
-
-
 
 
   

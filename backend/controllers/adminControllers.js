@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt')
 const { v2: cloudinary } = require('cloudinary')
 const doctorModel = require("../models/doctorModel")
 const jwt = require("jsonwebtoken")
+const appoinmentModel = require("../models/appoinmentsModel")
 
 
 //API FOR ADDING DOCTOR
@@ -97,4 +98,43 @@ const allDoctors =async(req ,res) =>{
 
 }
 
-module.exports = { addDoctor,loginAdmin,allDoctors }
+//api to get all appoinments list
+const appoinmentsAdmin = async (req,res)=>{
+    try{
+        const appoinments= await appoinmentModel.find({})
+        res.json ({success:true , appoinments})
+    } catch(error){
+        console.log(error)
+        res.status(500).json({ success: false, message: error.message })
+
+    }
+
+}
+
+//api for appionment cancellation
+
+
+  const appoinmentCancel=async(req,res)=>{
+    try {
+        const {appointmentId}=req.body
+        const appionmentData=await appoinmentModel.findById(appointmentId)
+        await appoinmentModel.findByIdAndUpdate(appointmentId,{cancelled:true})
+
+        //releasing doctor slot
+        const {docId,slotDate,slotTime}=appionmentData
+        const doctorData =await doctorModel.findById(docId)
+        let slots_booked =doctorData.slots_booked
+        slots_booked[slotDate]=slots_booked[slotDate].filter(e=>e!==slotTime)
+        await doctorModel.findByIdAndUpdate(docId,{slots_booked})
+
+        res.json({success:true,message:'Appointment cancelled successfully'})
+
+    } catch (error) {
+        console.log(error)
+        res.json({success:false,message:error.message})
+    }
+}
+  
+
+
+module.exports = { addDoctor,loginAdmin,allDoctors,appoinmentsAdmin }
