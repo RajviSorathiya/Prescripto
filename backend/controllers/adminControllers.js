@@ -137,4 +137,4 @@ const appoinmentsAdmin = async (req,res)=>{
   
 
 
-module.exports = { addDoctor,loginAdmin,allDoctors,appoinmentsAdmin }
+module.exports = { addDoctor,loginAdmin,allDoctors,appoinmentsAdmin ,appoinmentCancel}

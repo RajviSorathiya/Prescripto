@@ -7,7 +7,7 @@ import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
 
 const AllAppointments = () => {
-  const { aToken, appointments, getAllAppointments,appoinmentsAdmin } = useContext(AdminContext);
+  const { aToken, appointments, getAllAppointments,appoinmentsAdmin,cancelAppointment } = useContext(AdminContext);
   const {calculateAge,slotDataFormat,currency}=useContext(AppContext)
   useEffect(() => {
     if (aToken) {
@@ -48,7 +48,7 @@ const AllAppointments = () => {
             { 
             item.cancelled
             ?<p className="text-red-400 text-xs font-medium">cancelled</p>
-            :<img  className='w-10 cursor-pointer'src={assets.cancel_icon} alt=""/>
+            :<img onClick={()=>cancelAppointment(item._id)} className='w-10 cursor-pointer'src={assets.cancel_icon} alt=""/>
             }
             
 
