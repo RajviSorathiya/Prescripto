@@ -4,6 +4,7 @@ const { v2: cloudinary } = require('cloudinary')
 const doctorModel = require("../models/doctorModel")
 const jwt = require("jsonwebtoken")
 const appoinmentModel = require("../models/appoinmentsModel")
+const userModel = require("../models/userModel")
 
 
 //API FOR ADDING DOCTOR
@@ -134,7 +135,29 @@ const appoinmentsAdmin = async (req,res)=>{
         res.json({success:false,message:error.message})
     }
 }
+
+//Api to get dashboard data for admin panal
+const adminDashbord =async(req,res)=>{
+    try {
+        const doctors =await doctorModel.find({})
+        const users= await userModel.find({})
+        const appoinments = await appoinmentModel.find({})
+
+        const dashData ={
+            doctors:doctors.length,
+            appoinments:appoinments.length,
+            patients: users.length,
+            latestAppointments :appoinments.reverse().slice(0,5)
+
+        }
+        res.json({success:true,dashData})
+        
+    } catch (error) {
+        console.log(error)
+        res.json({success:false,message:error.message})
+    }
+}
   
 
 
-module.exports = { addDoctor,loginAdmin,allDoctors,appoinmentsAdmin ,appoinmentCancel}
+module.exports = { addDoctor,loginAdmin,allDoctors,appoinmentsAdmin ,appoinmentCancel,adminDashbord}
