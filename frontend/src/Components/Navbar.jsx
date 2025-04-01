@@ -8,6 +8,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { token, setToken, userData, setUserData, backendUrl } = useContext(AppContext);
   const [showMenu, setShowMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -31,7 +32,18 @@ const Navbar = () => {
     };
 
     fetchUserProfile();
-  }, [token, backendUrl]);
+  }, [ backendUrl]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showProfileMenu && !event.target.closest('.profile-menu-container')) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileMenu]);
 
   const handleLogout = () => {
     setToken(null);
@@ -41,7 +53,7 @@ const Navbar = () => {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-white z-50">
+    <div className="fixed min-h-16 top-0 left-0 right-0 bg-white z-50">
       <div className="flex items-center justify-between text-sm py-4 border-b border-b-gray-100 px-4 md:px-6 lg:px-8 max-w-[1440px] mx-auto">
         <img
           onClick={() => navigate("/")}
@@ -83,38 +95,71 @@ const Navbar = () => {
         </ul>
 
         <div className="flex items-center gap-4">
-          {token && token !== 'false' && userData ? (
-            <div className="flex items-center gap-2 cursor-pointer group relative">
-              <img
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
-                src={userData.image || '/default-avatar.png'}
-                alt={userData.name}
-              />
-              
-              <img className="w-2 md:w-2.5" src={assets.dropdown_icon} alt="Dropdown" />
-              
-              <div className="absolute top-0 right-0 pt-12 md:pt-14 text-sm md:text-base font-medium text-gray-600 z-20 hidden group-hover:block">
-                <div className="min-w-36 md:min-w-48 bg-white rounded-lg flex flex-col gap-2 p-3 md:p-4 shadow-lg border border-gray-100">
-                  <p
-                    onClick={() => navigate("/my-profile")}
-                    className="hover:text-blue-500 cursor-pointer transition-colors py-1"
-                  >
-                    My Profile
-                  </p>
-                  <p
-                    onClick={() => navigate("/my-appointments")}
-                    className="hover:text-blue-500 cursor-pointer transition-colors py-1"
-                  >
-                    My Appointments
-                  </p>
-                  <p
-                    onClick={handleLogout}
-                    className="hover:text-blue-500 cursor-pointer transition-colors py-1"
-                  >
-                    Logout
-                  </p>
-                </div>
+          {token && userData ? (
+            <div className="flex items-center gap-2 relative profile-menu-container">
+              <div 
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                <img
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
+                  src={userData.image || '/default-avatar.png'}
+                  alt={userData.name}
+                  onError={(e) => {
+                    e.target.src = '/default-avatar.png';
+                  }}
+                />
+                
+                <img 
+                  className={`w-2 md:w-2.5 transition-transform duration-200 ${
+                    showProfileMenu ? 'rotate-180' : ''
+                  }`} 
+                  src={assets.dropdown_icon} 
+                  alt="Dropdown" 
+                />
               </div>
+              
+              {/* Dropdown Menu */}
+              {showProfileMenu && (
+                <div className="absolute top-full right-0 mt-2 text-sm md:text-base font-medium text-gray-600 z-50">
+                  <div className="min-w-36 md:min-w-48 bg-white rounded-lg flex flex-col gap-1 p-2 shadow-lg border border-gray-100">
+                    <button
+                      onClick={() => {
+                        navigate("/my-profile");
+                        setShowProfileMenu(false);
+                      }}
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 hover:text-blue-500 transition-colors"
+                    >
+                     
+                      My Profile
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        navigate("/my-appointments");
+                        setShowProfileMenu(false);
+                      }}
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 hover:text-blue-500 transition-colors"
+                    >
+                      
+                      My Appointments
+                    </button>
+                    
+                    <div className="h-px bg-gray-200 my-1"></div>
+                    
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setShowProfileMenu(false);
+                      }}
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 hover:text-red-500 transition-colors"
+                    >
+                      
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -126,7 +171,7 @@ const Navbar = () => {
           )}
 
           {/* Mobile Create Account Button */}
-          {(!token || token === 'false') && (
+          {!token && (
             <button
               onClick={() => navigate('/login')}
               className="bg-blue-500 text-white px-4 py-2 text-sm rounded-full font-medium md:hidden hover:bg-blue-600 transition-colors"
@@ -136,7 +181,11 @@ const Navbar = () => {
           )}
 
           {/* Mobile Menu Button */}
-          <button onClick={() => setShowMenu(true)} className="md:hidden">
+          <button 
+            onClick={() => setShowMenu(true)} 
+            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Menu"
+          >
             <img className="w-6" src={assets.menu_icon} alt="Menu" />
           </button>
         </div>
@@ -210,7 +259,7 @@ const Navbar = () => {
               >
                 CONTACT
               </NavLink>
-              {token && token !== 'false' && userData && (
+              {token && userData && (
                 <>
                   <NavLink
                     to="/my-profile"

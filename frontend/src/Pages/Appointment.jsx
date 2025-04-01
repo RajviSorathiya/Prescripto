@@ -151,7 +151,7 @@ const Appointment = () => {
   }
 
   return (
-    <div>
+    <div className='mt-24'>
       {/*----------------Doctors details----------------------*/}
       <div className='flex flex-col sm:flex-row gap-4'>
         <div>
@@ -176,7 +176,7 @@ const Appointment = () => {
       {/*------------BOOKING SLOTS------------------*/}
       <div className='sm:ml-72 sm:pl-4 mt-4 font-medium text-gray-700'>
         <p>Booking slots</p>
-        <div className='flex gap-3 items-center w-full overflow-x-scroll mt-4'>
+        <div className='flex gap-3 items-center w-full  overflow-x-scroll mt-4'>
           {docSlots.map((daySlots, index) => (
             daySlots.length > 0 && (
               <div 

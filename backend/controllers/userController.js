@@ -94,31 +94,53 @@ const getProfile = async(req,res)=>{
 }
 
 //API to update user profile
-const updateProfile = async (req,res) =>{
+const updateProfile = async (req,res) => {
     try {
-        const { userId,name ,phone,address,dob,gender} =req.body
-        const imageFile =req.file
+        const { userId, name, phone, address, dob, gender } = req.body;
+        const imageFile = req.file;
 
         if (!name || !phone || !dob || !gender) {
-            return res.json({sucsse:false ,message:"Data Missing"})
+            return res.json({
+                success: false,
+                message: "Required fields are missing"
+            });
         } 
-        await userModel.findByIdAndUpdate(userId,{name,phone, address:JSON.parse(address),dob,gender})
-        
-        if(imageFile){
-            //upload image to cloudinary
-            const imageUpload = await cloudinary.uploader.upload(imageFile.path,{resource_type:'image'})
-            const imageURL =imageUpload.secure_url
-            await userModel.findByIdAndUpdate(userId,{image:imageURL})
-        }
-        res.json({success:true,message})
 
+        // Update user data
+        await userModel.findByIdAndUpdate(userId, {
+            name,
+            phone, 
+            address: JSON.parse(address),
+            dob,
+            gender
+        });
+        
+        if(imageFile) {
+            //upload image to cloudinary
+            const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
+                resource_type: 'image'
+            });
+            const imageURL = imageUpload.secure_url;
+            await userModel.findByIdAndUpdate(userId, { image: imageURL });
+        }
+
+        // Get updated user data
+        const updatedUser = await userModel.findById(userId).select('-password');
+
+        res.json({
+            success: true,
+            message: "Profile updated successfully",
+            user: updatedUser  // Send back updated user data
+        });
 
     } catch (error) {
-        console.log(error)
-        res.json({success:false,message:error.message})
+        console.log(error);
+        res.json({
+            success: false,
+            message: error.message || "Error updating profile"
+        });
     }
-
-}
+};
 
 //API TO BOOK APPOINMENT
 const bookAppointment =async (req,res)=>{

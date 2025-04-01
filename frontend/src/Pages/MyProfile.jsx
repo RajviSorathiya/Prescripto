@@ -17,17 +17,23 @@ const MyProfile = () => {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      await loadUserProfileData();
-      setLoading(false);
+      const result = await loadUserProfileData();
+      if (result?.success) {
+        // Update localStorage if needed
+        localStorage.setItem('userData', JSON.stringify(result.user));
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast.error('Failed to load profile data');
+    } finally {
       setLoading(false);
     }
   };
 
   const updateUserProfileData = async () => {
     try {
+      setLoading(true);
+
       const formData = new FormData();
       formData.append('name', userData.name);
       formData.append('phone', userData.phone);
@@ -50,18 +56,35 @@ const MyProfile = () => {
         }
       );
 
-      if (data.success) {
-        toast.success(data.message);
-         await fetchUserProfile();
-        //await loadUserProfileData();
+      if (data && data.success) {
+        // First update the local storage
+        if (data.user) {
+          localStorage.setItem('userData', JSON.stringify(data.user));
+        }
+        
+        // Then fetch fresh data
+        await fetchUserProfile();
+        
+        // Finally show success message and reset states
+        toast.success(data.message || 'Profile updated successfully');
         setIsEdit(false);
         setImage(null);
       } else {
-        toast.error(data.message);
+        toast.error(data?.message || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      
+      // Properly handle different error scenarios
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('An error occurred while updating profile');
+      }
+    } finally {
+      setLoading(false); // Always reset loading state
     }
   };
 
@@ -76,7 +99,7 @@ const MyProfile = () => {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
+    <div className="min-h-[80vh] mt-24 flex items-center justify-center p-4">
       <div className="max-w-lg w-full flex flex-col gap-2 text-sm border rounded-xl p-8 shadow-lg">
         {
           isEdit
