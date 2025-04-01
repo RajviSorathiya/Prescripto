@@ -25,15 +25,27 @@ const Login = () => {
                 if(data.success) {
                     localStorage.setItem('aToken',data.token)
                     setAToken(data.token) // Actually set the token
+                }else {
+                    toast.error(data.message)
                 }
-            } else {
-                toast.error(data.message)
+    
+            } else{
+                const {data} =await axios.post(backendUrl +'/api/doctor/login',{email,password})
+                if(data.success) {
+                    localStorage.setItem('dToken',data.token)
+                    setDToken(data.token) // Actually set the token
+                    console.log(data.token);
+
+                }else {
+                    toast.error(data.message)
+                }
+            }
+
                 // Handle doctor login here
         
 
 
-            }
-        } catch (error) {
+            } catch (error) {
            // console.error('Login error:', error)
         }
     }
