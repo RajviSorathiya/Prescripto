@@ -95,8 +95,14 @@ const AdminContextProvider =(props)=>{
             }
         }
 
-    
-
+    const adminLogout = () => {
+        setAToken('');
+        setDoctors([]);
+        setAppointments([]);
+        setDashData(false);
+        localStorage.removeItem('aToken');
+        toast.success('Admin logged out successfully');
+    };
 
     const value ={
         aToken,setAToken,
@@ -105,8 +111,8 @@ const AdminContextProvider =(props)=>{
         appointments,setAppointments,
         getAllAppointments,
         cancelAppointment,
-        dashData,getDashData
-
+        dashData,getDashData,
+        adminLogout
     }
 
     return(

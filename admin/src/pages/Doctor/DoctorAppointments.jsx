@@ -1,29 +1,29 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
-import { AdminContext } from "../../context/AdminContext";
+import React, { useContext, useEffect, useState, useCallback } from "react";
+import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
 import { toast } from "react-toastify";
 import axios from "axios";
 
-const AllAppointments = () => {
-  const { aToken, appointments, setAppointments, backendUrl, cancelAppointment } = useContext(AdminContext);
+const DoctorAppointments = () => {
+  const { dToken, appointments, setAppointments, backendUrl } = useContext(DoctorContext);
   const { calculateAge, slotDataFormat, currency } = useContext(AppContext);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [filter, setFilter] = useState("all"); // all, today, upcoming, cancelled
+  const [filter, setFilter] = useState("all"); // all, today, upcoming, completed
 
   // Use useCallback to memoize the function so it doesn't cause infinite renders
   const fetchAppointments = useCallback(async () => {
-    if (!aToken) return;
+    if (!dToken) return;
     
     setLoading(true);
     try {
-      const { data } = await axios.get(backendUrl + '/api/admin/appointments', {
-        headers: { aToken }
+      const { data } = await axios.get(backendUrl + '/api/doctor/appointments', {
+        headers: { dToken: `Bearer ${dToken}` }
       });
       
       if (data.success) {
-        setAppointments(data.appoinments || []);
+        setAppointments(data.appointments.reverse());
       } else {
         toast.error(data.message);
       }
@@ -33,17 +33,52 @@ const AllAppointments = () => {
     } finally {
       setLoading(false);
     }
-  }, [aToken, backendUrl, setAppointments]);
+  }, [dToken, backendUrl, setAppointments]);
 
-  // This effect will only run once when the component mounts and when aToken changes
+  // This effect will only run once when the component mounts and when dToken changes
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  const handleCancel = async (appointmentId) => {
+  const handleComplete = async (id) => {
     try {
-      await cancelAppointment(appointmentId);
-      // The cancelAppointment function already has its own success and error messages
+      const { data } = await axios.post(
+        backendUrl + '/api/doctor/complete-appointment',
+        { appointmentId: id },
+        { headers: { dToken: `Bearer ${dToken}` } }
+      );
+      
+      if (data.success) {
+        toast.success(data.message || "Appointment marked as completed");
+        // Refresh appointments after completion
+        fetchAppointments();
+        setSelectedAppointment(null);
+      } else {
+        toast.error(data.message || "Failed to complete appointment");
+      }
+    } catch (error) {
+      console.error("Error completing appointment:", error);
+      toast.error(error.message || "An error occurred");
+    }
+  };
+
+  const handleCancel = async (id) => {
+    try {
+      // Replace with your actual API endpoint for cancelling appointments
+      const { data } = await axios.post(
+        backendUrl + '/api/doctor/cancel-appointment',
+        { appointmentId: id },
+        { headers: { dToken: `Bearer ${dToken}` } }
+      );
+      
+      if (data.success) {
+        toast.success(data.message || "Appointment cancelled");
+        // Refresh appointments after cancellation
+        fetchAppointments();
+        setSelectedAppointment(null);
+      } else {
+        toast.error(data.message || "Failed to cancel appointment");
+      }
     } catch (error) {
       console.error("Error cancelling appointment:", error);
       toast.error(error.message || "An error occurred");
@@ -57,10 +92,10 @@ const AllAppointments = () => {
     
     if (filter === "today") {
       return appointments.filter(app => app.slotDate === today);
-    } else if (filter === "cancelled") {
-      return appointments.filter(app => app.cancelled);
+    } else if (filter === "completed") {
+      return appointments.filter(app => app.isCompleted);
     } else if (filter === "upcoming") {
-      return appointments.filter(app => !app.cancelled);
+      return appointments.filter(app => !app.isCompleted && !app.cancelled);
     }
     
     return appointments;
@@ -69,7 +104,7 @@ const AllAppointments = () => {
   return (
     <div className="w-full max-w-6xl m-5 animate-fadeIn">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">All Appointments</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Appointments</h1>
         <div className="flex items-center gap-4">
           <button 
             onClick={fetchAppointments}
@@ -100,15 +135,15 @@ const AllAppointments = () => {
                 ? "bg-blue-500 text-white" 
                 : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
             >
-              Active
+              Upcoming
             </button>
             <button 
-              onClick={() => setFilter("cancelled")}
-              className={`px-4 py-2 rounded-md text-sm transition-all duration-300 ${filter === "cancelled" 
+              onClick={() => setFilter("completed")}
+              className={`px-4 py-2 rounded-md text-sm transition-all duration-300 ${filter === "completed" 
                 ? "bg-blue-500 text-white" 
                 : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
             >
-              Cancelled
+              Completed
             </button>
           </div>
         </div>
@@ -125,7 +160,7 @@ const AllAppointments = () => {
         <div className="bg-white border rounded-lg shadow-sm p-8 text-center min-h-[50vh] flex flex-col justify-center">
           <img src={assets.appointment_icon} alt="No appointments" className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <h3 className="text-xl font-medium text-gray-700">No appointments found</h3>
-          <p className="text-gray-500 mt-2">There are no appointments in the system yet.</p>
+          <p className="text-gray-500 mt-2">You don't have any appointments yet.</p>
         </div>
       ) : filteredAppointments().length === 0 ? (
         <div className="bg-white border rounded-lg shadow-sm p-8 text-center min-h-[50vh] flex flex-col justify-center">
@@ -136,12 +171,12 @@ const AllAppointments = () => {
       ) : (
         <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
           {/* Table header */}
-          <div className="max-sm:hidden grid grid-cols-[0.5fr_2fr_1fr_1.5fr_2fr_1fr_1fr] gap-1 py-4 px-6 bg-gray-50 border-b font-medium text-gray-600">
+          <div className="max-sm:hidden grid grid-cols-[0.5fr_2fr_1fr_1fr_2fr_1fr_1fr] gap-1 py-4 px-6 bg-gray-50 border-b font-medium text-gray-600">
             <p>#</p>
             <p>Patient</p>
+            <p>Payment</p>
             <p>Age</p>
             <p>Date & Time</p>
-            <p>Doctor</p>
             <p>Fees</p>
             <p>Action</p>
           </div>
@@ -151,8 +186,8 @@ const AllAppointments = () => {
             {filteredAppointments().map((item, index) => (
               <div
                 key={index}
-                className={`flex flex-wrap items-center justify-between max-sm:gap-3 sm:grid sm:grid-cols-[0.5fr_2fr_1fr_1.5fr_2fr_1fr_1fr] text-gray-600 py-4 px-6 hover:bg-blue-50 transition-colors duration-200 ${
-                  item.cancelled ? "bg-red-50" : ""
+                className={`flex flex-wrap items-center justify-between max-sm:gap-3 sm:grid sm:grid-cols-[0.5fr_2fr_1fr_1fr_2fr_1fr_1fr] text-gray-600 py-4 px-6 hover:bg-blue-50 transition-colors duration-200 ${
+                  item.isCompleted ? "bg-green-50" : item.cancelled ? "bg-red-50" : ""
                 }`}
                 onClick={() => setSelectedAppointment(item)}
               >
@@ -165,41 +200,51 @@ const AllAppointments = () => {
                   />
                   <div>
                     <p className="font-medium">{item.userData?.name}</p>
-                    {item.userData?.email && <p className="text-xs text-gray-500">{item.userData.email}</p>}
+                    <p className="text-xs text-gray-500">{item.userData?.email}</p>
                   </div>
+                </div>
+                <div>
+                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                    item.payment ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                  }`}>
+                    {item.payment ? "online" : "cash"}
+                  </span>
                 </div>
                 <p className="max-sm:hidden">{item.userData?.dob ? calculateAge(item.userData.dob) : 'N/A'}</p>
                 <div>
                   <p className="font-medium">{slotDataFormat(item.slotDate)}</p>
                   <p className="text-sm text-gray-500">{item.slotTime}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <img
-                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                    src={item.docData?.image || "https://via.placeholder.com/40"}
-                    alt={item.docData?.name}
-                  />
-                  <div>
-                    <p className="font-medium">{item.docData?.name}</p>
-                    <p className="text-xs text-gray-500">{item.docData?.speciality}</p>
-                  </div>
-                </div>
                 <p className="font-medium">{currency}{item.amount}</p>
                 <div className="flex gap-2">
-                  {!item.cancelled ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCancel(item._id);
-                      }}
-                      className="p-2 bg-red-100 rounded-full hover:bg-red-200 transition-colors"
-                      title="Cancel appointment"
-                    >
-                      <img className="w-5 h-5" src={assets.cancel_icon} alt="Cancel" />
-                    </button>
+                  {!item.isCompleted && !item.cancelled ? (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancel(item._id);
+                        }}
+                        className="p-2 bg-red-100 rounded-full hover:bg-red-200 transition-colors"
+                        title="Cancel appointment"
+                      >
+                        <img className="w-5 h-5" src={assets.cancel_icon} alt="Cancel" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleComplete(item._id);
+                        }}
+                        className="p-2 bg-green-100 rounded-full hover:bg-green-200 transition-colors"
+                        title="Complete appointment"
+                      >
+                        <img className="w-5 h-5" src={assets.tick_icon} alt="Complete" />
+                      </button>
+                    </>
                   ) : (
-                    <span className="text-xs px-3 py-1 rounded-full bg-red-100 text-red-800 font-medium">
-                      Cancelled
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      item.isCompleted ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }`}>
+                      {item.isCompleted ? "Completed" : "Cancelled"}
                     </span>
                   )}
                 </div>
@@ -226,39 +271,15 @@ const AllAppointments = () => {
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="flex items-center gap-4 mb-6">
+                <img 
+                  src={selectedAppointment.userData?.image || "https://via.placeholder.com/60"} 
+                  alt={selectedAppointment.userData?.name} 
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                />
                 <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Patient</h4>
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={selectedAppointment.userData?.image || "https://via.placeholder.com/60"} 
-                      alt={selectedAppointment.userData?.name} 
-                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                    />
-                    <div>
-                      <p className="font-medium">{selectedAppointment.userData?.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {selectedAppointment.userData?.dob ? 
-                          `${calculateAge(selectedAppointment.userData.dob)} years` : 
-                          'Age not available'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Doctor</h4>
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={selectedAppointment.docData?.image || "https://via.placeholder.com/60"} 
-                      alt={selectedAppointment.docData?.name} 
-                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                    />
-                    <div>
-                      <p className="font-medium">{selectedAppointment.docData?.name}</p>
-                      <p className="text-sm text-gray-500">{selectedAppointment.docData?.speciality}</p>
-                    </div>
-                  </div>
+                  <h4 className="text-xl font-semibold">{selectedAppointment.userData?.name}</h4>
+                  <p className="text-gray-500">{selectedAppointment.userData?.dob ? `${calculateAge(selectedAppointment.userData.dob)} years old` : 'Age not available'}</p>
                 </div>
               </div>
               
@@ -284,29 +305,36 @@ const AllAppointments = () => {
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">Status</p>
                 <div className="flex gap-2">
-                  {selectedAppointment.cancelled ? (
+                  {selectedAppointment.isCompleted ? (
+                    <span className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                      Completed
+                    </span>
+                  ) : selectedAppointment.cancelled ? (
                     <span className="text-sm px-3 py-1 rounded-full bg-red-100 text-red-800 font-medium">
                       Cancelled
                     </span>
                   ) : (
-                    <span className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-800 font-medium">
-                      Active
+                    <span className="text-sm px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium">
+                      Upcoming
                     </span>
                   )}
                 </div>
               </div>
             </div>
             
-            {!selectedAppointment.cancelled && (
+            {!selectedAppointment.isCompleted && !selectedAppointment.cancelled && (
               <div className="px-6 py-4 border-t flex justify-end gap-3 bg-gray-50">
                 <button 
-                  onClick={() => {
-                    handleCancel(selectedAppointment._id);
-                    setSelectedAppointment(null);
-                  }}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  onClick={() => handleCancel(selectedAppointment._id)}
+                  className="px-4 py-2 border border-red-500 text-red-600 rounded-md hover:bg-red-50 transition-colors"
                 >
-                  Cancel Appointment
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleComplete(selectedAppointment._id)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  Mark as Completed
                 </button>
               </div>
             )}
@@ -317,4 +345,4 @@ const AllAppointments = () => {
   );
 };
 
-export default AllAppointments;
+export default DoctorAppointments;
