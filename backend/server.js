@@ -22,7 +22,13 @@ connectCloudinary()
 
 //middlewares
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    origin: [
+        'https://prescriptoadmin-kohl.vercel.app/',
+        'https://prescripto-one-beta.vercel.app/'
+    ],
+    credentials: true
+}))
 
 //api endpoints
 app.use('/api/admin',adminRouter)
